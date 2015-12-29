@@ -37,19 +37,19 @@ class KeyBindingsManager {
 
   void add(String bindingsString, KeyBindingCallback callback) {
     var bindings = parseBindingsString(bindingsString);
-    Map previous = null;
-    var current = _bindingsTree;
-    bindings.forEach((binding) {
-      binding.forEach((combo) {
+    bindings.forEach((sequence) {
+      Map previous = null;
+      var current = _bindingsTree;
+      sequence.forEach((combo) {
         if (current is Map) {
           previous = current;
           current = current.putIfAbsent(combo, () => {});
         } else {
           throw new ArgumentError(
-              'Key binding "$binding" shadows an existing key binding.');
+              'Key binding "$sequence" shadows an existing key binding.');
         }
       });
-      previous[binding.last] = callback;
+      previous[sequence.last] = callback;
     });
   }
 

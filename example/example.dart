@@ -1,14 +1,19 @@
-import 'package:hotkey/hotkey.dart' as hotkey;
 import 'dart:html';
 
+import 'package:hotkey/hotkey.dart';
+
 main() {
-  querySelectorAll('button').onClick.listen((MouseEvent e) {
-    var b = e.target as ButtonElement;
-    querySelector('#msg').text = 'Hotkey bound to an element: ${b.text} clicked';
-  });
-  hotkey.add('a > b > c', () {
-    querySelector('#msg').text = 'Hotkey bound to a function: a then b then c';
-  });
-  hotkey.processAll();
-  hotkey.enable();
+  var manager = new KeyBindingsManager();
+  var bindingsText = querySelector('#bindings') as TextAreaElement;
+  var messageDiv = querySelector('#message');
+
+  void updateBindings([_]) {
+    manager.removeAll();
+    bindingsText.value.split('\n').forEach((b) {
+      manager.add(b, (_) => messageDiv.setInnerHtml('You pressed "$b"'));
+    });
+  }
+
+  updateBindings();
+  querySelector('#update')..onClick.listen(updateBindings);
 }

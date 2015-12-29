@@ -11,3 +11,8 @@ transformers:
     suppressWarnings: 'false'
     suppressHints: 'false'
     terse: 'false'
+dependencies:
+  quiver: '^0.21.0'
+dev_dependencies:
+  dart_dev: '^1.0.6'
+  dart_style: '^0.2.2'

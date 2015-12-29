@@ -1,18 +1,22 @@
+### Dart template
 # Don’t commit the following directories created by pub.
-.idea
+.buildlog
+.pub/
 build/
-packages/
+packages
+.packages
 
 # Or the files created by dart2js.
 *.dart.js
-*.dart.precompiled.js
 *.js_
 *.js.deps
 *.js.map
 
 # Include when developing application packages.
 pubspec.lock
-bin/packages
-example/packages
-test/packages
-packages
+
+# Custom rules:
+.idea/
+coverage/
+doc/
+*.orig

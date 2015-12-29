@@ -77,7 +77,7 @@ class KeyBindingsManager {
   }
 
   void removeAll() {
-    for (var key in _bindingsTree.keys) {
+    for (var key in _bindingsTree.keys.toList()) {
       _bindingsTree.remove(key);
     }
   }

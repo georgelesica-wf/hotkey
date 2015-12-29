@@ -1,144 +1,59 @@
-# Overview
-**hotkey** is a Dart library that enables the binding of hotkeys
-(keyboard shortcuts) to `Element`'s or `Function`'s. The library allows a wide
-range of hotkeys, from simple ones that consist of only single letters to
-complex ones that consist of a series of keys with `CTRL`, `SHIFT`, and `ALT`
-modifiers.
-# Bind Hotkeys to Functions
-```` dart
-import 'package:hotkey/hotkey.dart' as hotkey;
+# Key Bindings
 
-hotkey.add('a>b>c | x>y>z', () => print('A then B then C or X then Y then Z'));
-hotkey.add('CTRL+M > CTRL+M', () => print('CTRL+M then CTRL+M'));
-hotkey.add('SHIFT+T', () => print('SHIFT+T'));
-hotkey.add('CTRL+SHIFT+ALT+A', () => print('CTRL+SHIFT+ALT+A'));
+A Dart library for creating keyboard shortcuts and other key bindings.
+Combinations of keypresses, such as "Control X" may be bound to callback
+functions. The library supports fairly complex shortcuts including
+any combination of the Control, Alt, Meta, and Shift modifer keys,
+and key combination sequences, such as "Control X" followed immediately
+by "Alt Z", etcetera.
 
-hotkey.enable();
-````
-# Bind Hotkeys to Elements
+## Examples
 
-1. If element `e` is editable, `e.focus` is called. An element `e` is editable if
-    1. `e` is a `textarea` and `e.disabled` == `false`
-    2. `e` is an `input` and `e.type` in ['tel', 'text', 'email', 'search', 'password'] and `e.disabled` == `false`
-    3. `e.isContentEditable` == `true` or there exists a parent node `p` of `e` such that `p.isContentEditable` == `true`
-2. Otherwise, `e.click` is called
+Key Bindings uses the [dart_dev](https://github.com/Workiva/dart_dev) package.
+Clone the repo, then do `pub get` followed by `pub run dart_dev examples`.
+The example application provides a playground for testing and experimenting
+with key bindings.
 
-## Option 1 - Declarative
+## Installation
 
-HTML
-```` html    
-<a href="#inbox" data-hotkey="G>I" title="(G then I)">Inbox</a>
+## Usage
 
-<button data-hotkey="CTRL+ENTER | ALT+S" title="(Ctrl+Enter or Alt+S)">Send</button>
+First, create a `KeyBindingsManager`, then add key bindings to it.
 
-<button data-hotkey="ESC" title="(Esc)">Cancel</button>
+```{.dart}
+var manager = new KeyBindingsManager();
+manager.addAll({
+  'CTRL+A': (_) => print('You pressed CTRL+A'),
+  'CTRL+SHIFT+A': (_) => print('You pressed CTRL+SHIFT+A')
+});
+manager.add('A', (_) => print('You pressed A');
+manager.remove('A');
+```
 
-<input type="search" data-hotkey="/" title="(/)" placeholder="Search the store" />
+### Binding Syntax
 
-<button data-hotkey="CTRL+SHIFT+ALT+M > G > G > G">Magic Button</button>
-````
+There are four available modifier keys:
 
-DART
-```` dart
-import 'package:hotkey/hotkey.dart' as hotkey;
+  * `CTRL` - Control key
+  * `ALT` - Alt key
+  * `META` - Command (Mac) or Windows Logo key (Windows, Linux)
+  * `SHIFT` - Shift key
 
-hotkey.processAll();
-hotkey.enable();
-````
+These are optionally combined with the rest of the keys on the keyboard
+using the `+` character. Other keys
+are represented by the character they would normally produce if
+pressed without holding down the Shift key. For example, `CTRL+;` would
+capture a keypress on the semicolon key while the Control key is
+held down.
 
-## Option 2 - Programmatic
-```` dart
-import 'package:hotkey/hotkey.dart' as hotkey;
+Sequences of keypresses may also be specified, they are delimited with
+the `>` key (like a little arrow pointing forward in time). For example,
+`CTRL+A > CTRL+A` would capture "Control A" pressed twice in a row.
 
-hotkey.add('g > i', inboxAnchorElement);
-hotkey.add('ctrl+enter | alt+s', sendButton);
-hotkey.add('esc', cancelButton);
+It is illegal to specify two conflicting or ambiguous key bindings.
+For example, it is not possible to define an action for both
+`CTRL+A` *and* `CTRL+A > CTRL+A`.
 
-hotkey.enable();
-````
-# API Reference
-```` dart
-/**
- * The attribute used to store a hotkey for an [Element].
- */
-const HOTKEY_ATTRIBUTE = 'data-hotkey';
-
-/**
- * The delimiter to separate hotkeys in [HOTKEY_ATTRIBUTE].
- *
- * For example, to bind two hotkeys 'CTRL+ENTER' and 'ALT+S' to a button,
- * set its [HOTKEY_ATTRIBUTE] to 'CTRL+ENTER | ALT+S'.
- */
-const HOTKEY_DELIMITER = '|';
-
-/**
- * The delimiter to separate key combinations within a hotkey.
- *
- * '>' is used instead of ',' to allow ',' to be used as an hotkey.
- *
- * Example: 'CTRL+M > CTRL+I' means pressing CTRL + G then CTRL + I.
- */
-const KEY_COMBINATION_DELIMITER = '>';
-
-/**
- * Allowed key identifiers used in hotkeys.
- */
-const ALLOWED_KEY_IDENTIFIERS = const {
-  // See the source code.
-};
-
-/**
- * Looks for elements with [HOTKEY_ATTRIBUTE] attribute in the document and
- * hook up the hotkeys.
- *
- * If [removeHotkeyAttribute] is `true`, [HOTKEY_ATTRIBUTE] attribute will be
- * removed.
- */
-void processAll({bool removeHotkeyAttribute: true});
-
-/**
- * Adds the hotkey [hotkey] to the target [target].
- *
- * A hotkey is a series of key combinations separated by [KEY_COMBINATION_DELIMITER].
- * A key combination can be any character defined by [ALLOWED_KEY_IDENTIFIERS]
- * combined with three key modifiers CTRL, SHIFT, and ALT in order.
- *
- * Examples of valid hotkeys: 'A', 'G>I', 'CTRL+K > CTRL+D', 'CTRL+SHIFT+ALT+A'.
- *
- * Examples of invalid hotkeys:
- * * 'A,B': wrong delimiter
- * * 'CTRL+ALT': missing key identifier
- * * 'ALT+CTRL+B': wrong order of CTRL and ALT
- *
- * [target] is either an [Element] or a [Function].
- * * If [target] is Function, it is called without any argument
- * * If [target] is an editable element (textarea, input[type=text], ...),
- * [target.focus] is called
- * * Else, [target.click] is called
- *
- * A target can have many hotkeys, but a hotkey can only have one target.
- *
- * Throws an [ArgumentError] if the hotkey association cannot be established.
- */
-void add(String hotkey, target);
-
-/**
- * Removes [hotkey] from [target].
- *
- * If [hotkey] is `null`, removes all hotkeys associated with [target].
- *
- * Returns `true` on success.
- */
-bool remove(String hotkey, target);
-
-/**
- * Enables hotkeys globally.
- */
-void enable();
-
-/**
- * Disables hotkeys globally.
- */
-void disable();
-
-````
+Separating two key binding specifications with a comma will match
+both of them. For example, `CTRL+A, CTRL+B` would cause "Control A"
+and "Control B" to do the same thing.

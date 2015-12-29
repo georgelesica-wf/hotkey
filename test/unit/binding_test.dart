@@ -8,7 +8,7 @@ import '../../lib/src/binding.dart';
 main() {
   group('parseBindingsString', () {
     test('should parse multiple bindings', () {
-      var parsed = parseBindingsString('CTRL+A, CTRL+B');
+      var parsed = parseBindingsString('CTRL+A | CTRL+B');
 
       expect(parsed.length, equals(2));
       expect(parsed[0].length, equals(1));
@@ -27,7 +27,7 @@ main() {
     });
 
     test('should parse multiple sequences', () {
-      var parsed = parseBindingsString('CTRL+A > CTRL+B, CTRL+C > CTRL+D');
+      var parsed = parseBindingsString('CTRL+A > CTRL+B | CTRL+C > CTRL+D');
 
       expect(parsed.length, equals(2));
       expect(parsed[0].length, equals(2));

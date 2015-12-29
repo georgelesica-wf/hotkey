@@ -191,6 +191,7 @@ class Combination {
   }
 
   String toString() {
+    // TODO: Use the + constant instead of the character.
     return '${alt ? 'ALT+' : ''}${control ? 'CTRL+' : ''}'
         '${meta ? 'META+' : ''}${shift ? 'SHIFT+' : ''}$keyString';
   }

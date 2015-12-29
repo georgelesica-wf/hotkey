@@ -6,16 +6,12 @@ import 'package:hotkey/src/binding.dart';
 import 'package:hotkey/src/combination.dart';
 import 'package:hotkey/src/typedefs.dart';
 
+// TODO: Add getter for "help" data structure based on descriptions and available bindings.
+// TODO: Add a timeout that resets the current sequence.
+// TODO: Crib whatever we can from datatables hotkey manager.
+// TODO: Contextual hotkeys that fire only when a particular element has focus.
+// TODO: Consider allowing consumers to temporarily override handlers (stack).
 class KeyBindingsManager {
-  /// Delimiter to specify different key bindings for the same action.
-  /// For example, to bind two hotkeys 'CTRL+ENTER' and 'ALT+S' to an action,
-  /// set its key combination to 'CTRL+ENTER | ALT+S'.
-  static final String BINDING_DELIMITER = '|';
-
-  /// The delimiter to separate key combinations within a key binding.
-  /// Example: 'CTRL+M > CTRL+I' means pressing CTRL + G then CTRL + I.
-  static final String SEQUENCE_DELIMITER = '>';
-
   /// A tree of bindings. Each inner node represents a parsed binding
   /// combination, such as "CTRL+N", or "CTRL+SHIFT+INSERT". Each leaf
   /// is a callback function to be called when the binding sequence
@@ -32,9 +28,11 @@ class KeyBindingsManager {
   }
 
   KeyBindingsManager.forTarget(EventTarget target) {
+    _currentNode = _bindingsTree;
     _subscribe(target);
   }
 
+  // TODO: Add optional [description] parameter.
   void add(String bindingsString, KeyBindingCallback callback) {
     var bindings = parseBindingsString(bindingsString);
     bindings.forEach((sequence) {

@@ -143,10 +143,10 @@ class Combination {
 
   /// Allowed modifiers used in key bindings.
   static final List<String> ALLOWED_MODIFIERS = const [
-    'SHIFT',
-    'CTRL',
     'ALT',
-    'META'
+    'CTRL',
+    'META',
+    'SHIFT'
   ];
 
   static final RegExp _whitespace = new RegExp(r'\s+');
@@ -188,5 +188,10 @@ class Combination {
     code += meta ? 10 : 0;
     code += shift ? 1 : 0;
     return code;
+  }
+
+  String toString() {
+    return '${alt ? 'ALT+' : ''}${control ? 'CTRL+' : ''}'
+        '${meta ? 'META+' : ''}${shift ? 'SHIFT+' : ''}$keyString';
   }
 }

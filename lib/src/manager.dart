@@ -47,7 +47,7 @@ class KeyBindingsManager {
               'Key binding "$sequence" shadows an existing key binding.');
         }
       });
-      previous[sequence.last] = callback;
+      previous[sequence.last] = () => callback(sequence);
     });
   }
 
@@ -113,7 +113,7 @@ class KeyBindingsManager {
 
     // TODO: Find a more elegant way to express this.
     if (_currentNode is KeyBindingCallback) {
-      _currentNode(combo);
+      _currentNode();
     } else {
       assert(false); // This can't happen
     }

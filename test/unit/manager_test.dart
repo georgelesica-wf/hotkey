@@ -34,9 +34,7 @@ main() {
         {bool control: false,
         bool alt: false,
         bool meta: false,
-        bool shift: false,
-        EventTarget target}) {
-      target ??= window;
+        bool shift: false}) {
       var keyCode = Combination.ALLOWED_KEYS.inverse[char.toUpperCase()];
       var keyEvent = new KeyEvent('keydown',
           keyCode: keyCode,
@@ -47,8 +45,17 @@ main() {
       provider.add(keyEvent);
     }
 
-    void typeCode(int keyCode) {
-      var keyEvent = new KeyEvent('keydown', keyCode: keyCode);
+    void typeCode(int keyCode,
+        {bool control: false,
+        bool alt: false,
+        bool meta: false,
+        bool shift: false}) {
+      var keyEvent = new KeyEvent('keydown',
+          keyCode: keyCode,
+          ctrlKey: control,
+          altKey: alt,
+          metaKey: meta,
+          shiftKey: shift);
       provider.add(keyEvent);
     }
 
@@ -84,11 +91,22 @@ main() {
       'CTRL+H | ALT+H': () {
         typeCombo('H', alt: true);
       },
-      // Meta keypresses interleaved into sequence.
+      // Modifier keypresses interleaved into sequence.
       'CTRL+I > ALT+I': () {
         typeCombo('I', control: true);
         typeCode(KeyCode.ALT);
         typeCombo('I', alt: true);
+      },
+      // Arrow keys.
+      'CTRL+UP': () {
+        typeCode(KeyCode.UP, control: true);
+      },
+      'CTRL+LEFT': () {
+        typeCode(KeyCode.LEFT, control: true);
+      },
+      // Brackets.
+      'CTRL+[': () {
+        typeCombo('[', control: true);
       }
     };
 

@@ -52,7 +52,7 @@ class KeyBindingsManager {
   }
 
   void add(String bindingsString, KeyBindingCallback callback,
-      {String description: ''}) {
+      {String description: '', String selector: ''}) {
     var bindings = parseBindingsString(bindingsString);
     bindings.forEach((sequence) {
       Map previous = null;
@@ -66,7 +66,8 @@ class KeyBindingsManager {
               'Key binding "$sequence" shadows an existing key binding.');
         }
       });
-      var handler = new Handler(sequence, callback, description);
+      var handler = new Handler(sequence, callback,
+          description: description, selector: selector);
       previous[sequence.last] = handler;
       _handlers.add(handler);
     });
@@ -149,14 +150,23 @@ class KeyBindingsManager {
       return;
     }
 
-    // TODO: Find a more elegant way to express this.
-    if (_currentNode is Function) {
-      _currentNode();
-    } else {
-      assert(false); // This can't happen
+    // At this point we should have a [Handler], if we don't,
+    // then something went terribly wrong and we have a bug.
+    assert(_currentNode is Handler);
+    Handler handler = _currentNode;
+
+    // Abort if the active element doesn't match the selector
+    // specified for this handler.
+    if (handler.selector != '') {
+      var elements = querySelectorAll(handler.selector);
+      if (!elements.contains(activeElement)) {
+        _resetCurrentNode();
+        return;
+      }
     }
 
-    _currentNode = _bindingsTree;
+    handler();
+    _resetCurrentNode();
 
     event.preventDefault();
     event.stopPropagation();

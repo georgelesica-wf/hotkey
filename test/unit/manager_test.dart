@@ -1,5 +1,5 @@
 @TestOn('browser')
-@Timeout(const Duration(seconds: 4))
+@Timeout(const Duration(seconds: 3))
 library hotkey.test.manager_test;
 
 import 'dart:async';
@@ -47,6 +47,11 @@ main() {
       provider.add(keyEvent);
     }
 
+    void typeCode(int keyCode) {
+      var keyEvent = new KeyEvent('keydown', keyCode: keyCode);
+      provider.add(keyEvent);
+    }
+
     Map<String, Function> sequences = {
       'CTRL+A > CTRL+A': () {
         typeCombo('A', control: true);
@@ -55,21 +60,35 @@ main() {
       'CTRL+B': () {
         typeCombo('B', control: true);
       },
+      // Bare key.
       'C': () {
         typeCombo('C');
       },
+      // Alt key.
       'CTRL+SHIFT+D > ALT+E': () {
         typeCombo('D', control: true, shift: true);
         typeCombo('E', alt: true);
       },
+      // Meta key.
       'META+F': () {
         typeCombo('F', meta: true);
       },
+      // Shift key.
+      'SHIFT+F': () {
+        typeCombo('F', shift: true);
+      },
+      // Next two are both sides of an "or".
       'CTRL+G | ALT+G': () {
         typeCombo('G', control: true);
       },
       'CTRL+H | ALT+H': () {
         typeCombo('H', alt: true);
+      },
+      // Meta keypresses interleaved into sequence.
+      'CTRL+I > ALT+I': () {
+        typeCombo('I', control: true);
+        typeCode(KeyCode.ALT);
+        typeCombo('I', alt: true);
       }
     };
 
@@ -79,7 +98,7 @@ main() {
     });
 
     for (var sequence in sequences.keys) {
-      test('should register a key sequence $sequence', () {
+      test('should respond to the key sequence "$sequence"', () {
         manager.add(sequence, expectAsync((_) {}));
         sequences[sequence]();
       });

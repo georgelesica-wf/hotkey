@@ -150,6 +150,15 @@ class Combination {
     'SHIFT'
   ];
 
+  static final List<String> MODIFIER_CODES = const [
+    16, // shift
+    17, // ctrl
+    18, // alt
+    91, // windows logo (left) / left cmd
+    92, // windows logo (right)
+    93 // windows menu / right cmd
+  ];
+
   static final RegExp _whitespace = new RegExp(r'\s+');
 
   /// Breaks a binding string into tokens and does some basic syntax checking

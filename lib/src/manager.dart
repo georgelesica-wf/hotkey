@@ -13,7 +13,6 @@ import 'package:hotkey/src/typedefs.dart';
 // TODO: Crib whatever we can from datatables hotkey manager.
 // TODO: Contextual hotkeys that fire only when a particular element has focus.
 // TODO: Consider allowing consumers to temporarily override handlers (stack).
-// FIXME: Do not reset matching when the only key pressed was a modifier.
 // TODO: Tests for combination.
 class KeyBindingsManager {
   /// The maximum amount of time the manager will wait between kepresses
@@ -108,8 +107,16 @@ class KeyBindingsManager {
   Iterable<Handler> get handlers => _handlers;
 
   void _detectSequence(KeyEvent event) {
-    // We do this check here because the user pressing a key that
-    // isn't allowed to be part of a combination is not an error.
+    // Check for presses on modifier keys. This indicates that the
+    // user may be changing to a different modifier as part of a
+    // sequence, like Ctrl+A > Alt+B, so we don't want to reset.
+    if (Combination.MODIFIER_CODES.contains(event.keyCode)) {
+      return;
+    }
+
+    // If the user presses a key that isn't allowed to be a part
+    // of a key binding (and isn't a modifier, which would have
+    // been caught above), then we want to reset our state.
     if (!Combination.ALLOWED_KEYS.containsKey(event.keyCode)) {
       _resetCurrentNode();
       return;

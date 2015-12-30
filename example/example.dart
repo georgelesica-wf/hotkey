@@ -11,14 +11,19 @@ main() {
     messageDiv.setInnerHtml('You triggered "$message"');
   }
 
+  void clearMessage() {
+    messageDiv.setInnerHtml('');
+  }
+
   void updateBindings([_]) {
     manager.removeAll();
+    clearMessage();
     bindingsText.value.split('\n').forEach((b) {
-      manager.add(b, (_) => setMessage(b));
+      manager.addBinding(b, (_) => setMessage(b));
     });
-    manager.add('CTRL+T > CTRL+1', (_) => setMessage('hit target 1'),
+    manager.addBinding('CTRL+T > CTRL+1', (_) => setMessage('hit target 1'),
         selector: '#target-1 input');
-    manager.add('CTRL+T > CTRL+2', (_) => setMessage('hit target 2'),
+    manager.addBinding('CTRL+T > CTRL+2', (_) => setMessage('hit target 2'),
         selector: '#target-2 input');
   }
 

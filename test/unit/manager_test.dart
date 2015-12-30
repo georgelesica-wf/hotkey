@@ -117,14 +117,39 @@ main() {
 
     for (var sequence in sequences.keys) {
       test('should respond to the key sequence "$sequence"', () {
-        manager.add(sequence, expectAsync((_) {}));
+        manager.addBinding(sequence, expectAsync((_) {}));
         sequences[sequence]();
       });
     }
 
+    group('addBinding', () {
+      test('should add the indicated binding', () {
+        manager.addBinding('CTRL+A', (_) {});
+        expect(manager.handlers.length, equals(1));
+      });
+
+      test('should overwrite a binding if `replace: true` is used', () {
+        manager.addBinding('CTRL+A', expectAsync((_) {}, count: 0));
+        expect(manager.handlers.length, equals(1));
+        manager.addBinding('CTRL+A', expectAsync((_) {}, count: 1),
+            replace: true);
+        typeCombo('A', control: true);
+        expect(manager.handlers.length, equals(1));
+      });
+    });
+
+    group('removeBinding', () {
+      test('should remove the indicated binding', () {
+        manager.addBinding('CTRL+A', (_) {});
+        expect(manager.handlers.length, equals(1));
+        manager.removeBinding('CTRL+A');
+        expect(manager.handlers, isEmpty);
+      });
+    });
+
     group('timeout', () {
       test('should reset sequence after too long between keypresses', () async {
-        manager.add('CTRL+A > CTRL+A', expectAsync((_) {}, count: 0));
+        manager.addBinding('CTRL+A > CTRL+A', expectAsync((_) {}, count: 0));
         typeCombo('A', control: true);
         // Wait slightly longer than the timeout.
         await new Future.delayed(KeyBindingsManager.sequenceTimeout * 1.1);

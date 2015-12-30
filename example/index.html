@@ -8,6 +8,8 @@
     <style>
         body {
             font: 11pt/15pt 'segoe ui', verdana, arial;
+            margin: auto;
+            max-width: 720px;
         }
 
         button {
@@ -48,7 +50,12 @@
 </head>
   <body>
     <h1>Key Bindings Example</h1>
-    <p>Enter key bindings strings below, one per line, for testing, then press "Update".</p>
+    <p>Enter key bindings strings below, one per line, for testing, then press "Update".
+    Some things to note. Handlers that don't use the Control, Alt, or Meta keys will not
+    work when an input, textarea, or other editable element is focused. This is by-design
+    to avoid clobbering native text manipulation commands. The bindings in the colored
+    boxes will only work if the corresponding inputs have focus. This allows for context-
+    sensitive bindings.</p>
     <div id="targets">
         <div id="target-1" class="target"><div>CTRL+T > CTRL+1</div><input type="text"></div>
         <div id="target-2" class="target"><div>CTRL+T > CTRL+2</div><input type="text"></div>

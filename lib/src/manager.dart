@@ -1,6 +1,7 @@
 library hotkey.src.manager;
 
 import 'dart:async';
+import 'dart:collection';
 import 'dart:html';
 
 import 'package:hotkey/src/binding.dart';
@@ -9,9 +10,7 @@ import 'package:hotkey/src/event_provider.dart';
 import 'package:hotkey/src/handler.dart';
 import 'package:hotkey/src/typedefs.dart';
 
-// TODO: Add getter for "help" data structure based on descriptions and available bindings.
-// TODO: Crib whatever we can from datatables hotkey manager.
-// TODO: Consider allowing consumers to temporarily override handlers (stack).
+// TODO: DT may want us to support scroll lock.
 class KeyBindingsManager {
   /// The maximum amount of time the manager will wait between kepresses
   /// before assuming that the user has abandoned the sequence and
@@ -34,6 +33,12 @@ class KeyBindingsManager {
 
   List<Handler> _handlers = [];
 
+  /// Used internally for tree traversal bookkeeping.
+  Queue<Map> _vertexStack = new Queue();
+
+  /// Used internally for tree traversal bookkeeping.
+  Queue<Combination> _edgeStack = new Queue();
+
   KeyBindingsManager() {
     _provider = new KeyboardEventProvider(window);
     _initialize();
@@ -49,58 +54,76 @@ class KeyBindingsManager {
     _initialize();
   }
 
-  void add(String bindingsString, KeyBindingCallback callback,
-      {String description: '', String selector: ''}) {
-    var bindings = parseBindingsString(bindingsString);
-    bindings.forEach((sequence) {
-      Map previous = null;
-      var current = _bindingsTree;
-      sequence.forEach((combo) {
-        if (current is Map) {
-          previous = current;
-          current = current.putIfAbsent(combo, () => {});
-        } else {
-          throw new ArgumentError(
-              'Key binding "$sequence" shadows an existing key binding.');
-        }
-      });
-      var handler = new Handler(sequence, callback,
-          description: description, selector: selector);
-      previous[sequence.last] = handler;
-      _handlers.add(handler);
-    });
+  void addAll(Map<String, KeyBindingCallback> bindings, {bool replace: false}) {
+    bindings.forEach((bindingsString, callback) =>
+        addBinding(bindingsString, callback, replace: replace));
   }
 
-  // TODO: How can we get descriptions into this cleanly?
-  void addAll(Map<String, KeyBindingCallback> bindings) {
-    bindings
-        .forEach((bindingsString, callback) => add(bindingsString, callback));
+  void addBinding(String bindingsString, KeyBindingCallback callback,
+      {String description: '', String selector: '', bool replace: false}) {
+    var bindings = parseBindingsString(bindingsString);
+    for (var sequence in bindings) {
+      addHandler(
+          new Handler(sequence, callback,
+              description: description, selector: selector),
+          replace: replace);
+    }
   }
 
-  void remove(String bindingsString) {
-    var bindings = parseBindingsString(bindingsString);
-    Map previous = null;
+  void addHandler(Handler handler, {bool replace: false}) {
+    var previous = null;
     var current = _bindingsTree;
-    bindings.forEach((binding) {
-      binding.forEach((combo) {
-        if (current is Map) {
-          previous = current;
-          current = current.putIfAbsent(combo, () => {});
-        } else {
-          throw new ArgumentError(
-              'Key binding "$binding" does not currently exist.');
-        }
-      });
-      _handlers.remove(previous[binding.last] as Handler);
-      previous.remove(binding.last);
-    });
+    for (var combo in handler.sequence) {
+      if (current is Map) {
+        previous = current;
+        current = current.putIfAbsent(combo, () => {});
+      } else {
+        throw new ArgumentError(
+            'Key binding "${handler.sequence}" shadows existing key binding.'
+            ' Try adding `replace: true` to replace the handler.');
+      }
+    }
+
+    if (current is Handler || current.keys.isNotEmpty) {
+      // We ran into a leaf node or we didn't make it to the leaves.
+      // Either way, if we are replacing, we need to remove everything
+      // below us in the tree, then try to add the [Handler] again.
+      // The recursion can never go more than one level deep.
+      _pruneTree(current);
+      addHandler(handler);
+      return;
+    }
+
+    assert(previous is Map);
+    assert(current is Map);
+
+    previous[handler.sequence.last] = handler;
+    _handlers.add(handler);
   }
 
+  /// Remove all key bindings from this manager.
   void removeAll() {
     for (var key in _bindingsTree.keys.toList()) {
       _bindingsTree.remove(key);
     }
     _handlers = [];
+  }
+
+  /// Remove a binding based on its binding string. If the original
+  /// binding string that was used to add the handler consisted of
+  /// several OR'd parts (separated with `|`), a subset of the parts
+  /// may be specified for removal and only those parts will be
+  /// removed.
+  void removeBinding(String bindingsString) {
+    var bindings = parseBindingsString(bindingsString);
+    bindings.forEach((sequence) {
+      _removeSequence(sequence);
+    });
+  }
+
+  /// Remove a [Handler] from the manager.
+  void removeHandler(Handler handler) {
+    _removeSequence(handler.sequence);
   }
 
   Iterable<Handler> get handlers => _handlers;
@@ -207,6 +230,58 @@ class KeyBindingsManager {
       element = element.parent;
     }
     return false;
+  }
+
+  /// Find all [Handler] objects (leaves) that are below [pruneRoot] in
+  /// the tree and remove them. This is recursive, but doing it this way
+  /// is conceptually simpler than the alternative, and the tree is never
+  /// expected to be more than two or three levels deep.
+  void _pruneTree(pruneRoot) {
+    if (pruneRoot is Handler) {
+      removeHandler(pruneRoot);
+      return;
+    }
+
+    assert(pruneRoot is Map);
+
+    for (var nextRoot in pruneRoot.values) {
+      _pruneTree(nextRoot);
+    }
+  }
+
+  void _removeSequence(Iterable<Combination> sequence) {
+    _vertexStack.clear();
+    _edgeStack.clear();
+
+    var current = _bindingsTree;
+    for (var combo in sequence) {
+      if (current is Map) {
+        _vertexStack.addFirst(current);
+        _edgeStack.addFirst(combo);
+        current = current[combo];
+      } else {
+        // Sequence was too long.
+        return;
+      }
+    }
+
+    if (current is Map) {
+      // Sequence was too short.
+      return;
+    }
+
+    assert(current is Handler);
+
+    while (_vertexStack.isNotEmpty) {
+      var vertex = _vertexStack.removeFirst();
+      var combo = _edgeStack.removeFirst();
+      vertex.remove(combo);
+      if (vertex.keys.length > 0) {
+        break;
+      }
+    }
+
+    _handlers.remove(current);
   }
 
   void _resetCurrentNode() {

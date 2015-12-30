@@ -15,12 +15,7 @@ main(List<String> args) async {
 
   config.examples.port = 9000;
 
-  config.format.directories = [
-    'example/',
-    'lib/',
-    'test/unit/',
-    'tool/',
-  ];
+  config.format.directories = ['example/', 'lib/', 'test/unit/', 'tool/',];
 
   config.test.platforms = ['vm', 'content-shell'];
 

@@ -1,5 +1,6 @@
 library hotkey.src.manager;
 
+import 'dart:async';
 import 'dart:html';
 
 import 'package:hotkey/src/binding.dart';
@@ -12,6 +13,11 @@ import 'package:hotkey/src/typedefs.dart';
 // TODO: Contextual hotkeys that fire only when a particular element has focus.
 // TODO: Consider allowing consumers to temporarily override handlers (stack).
 class KeyBindingsManager {
+  /// The maximum amount of time the manager will wait between kepresses
+  /// before assuming that the user has abandoned the sequence and
+  /// resetting itself.
+  static final Duration sequenceTimeout = const Duration(seconds: 1);
+
   /// A tree of bindings. Each inner node represents a parsed binding
   /// combination, such as "CTRL+N", or "CTRL+SHIFT+INSERT". Each leaf
   /// is a callback function to be called when the binding sequence
@@ -21,6 +27,8 @@ class KeyBindingsManager {
   /// The current position in the bindings tree, based on the last
   /// keyboard event observed.
   dynamic _currentNode;
+
+  Timer _timeoutTimer;
 
   KeyBindingsManager() {
     _currentNode = _bindingsTree;
@@ -84,6 +92,7 @@ class KeyBindingsManager {
     // We do this check here because the user pressing a key that
     // isn't allowed to be part of a combination is not an error.
     if (!Combination.ALLOWED_KEYS.containsKey(event.keyCode)) {
+      _resetCurrentNode();
       return;
     }
 
@@ -94,8 +103,11 @@ class KeyBindingsManager {
         !event.ctrlKey &&
         !event.altKey &&
         !event.metaKey) {
+      _resetCurrentNode();
       return;
     }
+
+    _resetTimeout();
 
     var combo = new Combination.fromKeyboardEvent(event);
     _currentNode = _currentNode[combo];
@@ -112,7 +124,7 @@ class KeyBindingsManager {
     }
 
     // TODO: Find a more elegant way to express this.
-    if (_currentNode is KeyBindingCallback) {
+    if (_currentNode is Function) {
       _currentNode();
     } else {
       assert(false); // This can't happen
@@ -157,8 +169,18 @@ class KeyBindingsManager {
     return false;
   }
 
+  void _resetCurrentNode() {
+    _currentNode = _bindingsTree;
+  }
+
+  void _resetTimeout() {
+    _timeoutTimer?.cancel();
+    _timeoutTimer = new Timer(sequenceTimeout, _resetCurrentNode);
+  }
+
   void _subscribe(EventTarget target) {
     // TODO: Should we keep track of the subscription? Would we ever cancel it?
+//    KeyEvent.keyDownEvent.forTarget(target, useCapture: true).listen(_detectKeyBindingPress);
     Element.keyDownEvent
         .forTarget(target, useCapture: true)
         .listen(_detectKeyBindingPress);

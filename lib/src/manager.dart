@@ -5,13 +5,14 @@ import 'dart:html';
 
 import 'package:hotkey/src/binding.dart';
 import 'package:hotkey/src/combination.dart';
+import 'package:hotkey/src/event_provider.dart';
 import 'package:hotkey/src/typedefs.dart';
 
 // TODO: Add getter for "help" data structure based on descriptions and available bindings.
-// TODO: Add a timeout that resets the current sequence.
 // TODO: Crib whatever we can from datatables hotkey manager.
 // TODO: Contextual hotkeys that fire only when a particular element has focus.
 // TODO: Consider allowing consumers to temporarily override handlers (stack).
+// FIXME: Do not reset matching when the only key pressed was a modifier.
 class KeyBindingsManager {
   /// The maximum amount of time the manager will wait between kepresses
   /// before assuming that the user has abandoned the sequence and
@@ -30,14 +31,21 @@ class KeyBindingsManager {
 
   Timer _timeoutTimer;
 
+  EventProvider _provider;
+
   KeyBindingsManager() {
-    _currentNode = _bindingsTree;
-    _subscribe(window);
+    _provider = new KeyboardEventProvider(window);
+    _initialize();
   }
 
   KeyBindingsManager.forTarget(EventTarget target) {
-    _currentNode = _bindingsTree;
-    _subscribe(target);
+    _provider = new KeyboardEventProvider(target);
+    _initialize();
+  }
+
+  KeyBindingsManager.withProvider(EventProvider provider) {
+    _provider = provider;
+    _initialize();
   }
 
   // TODO: Add optional [description] parameter.
@@ -88,7 +96,7 @@ class KeyBindingsManager {
     }
   }
 
-  void _detectKeyBindingPress(KeyboardEvent event) {
+  void _detectSequence(KeyEvent event) {
     // We do this check here because the user pressing a key that
     // isn't allowed to be part of a combination is not an error.
     if (!Combination.ALLOWED_KEYS.containsKey(event.keyCode)) {
@@ -147,6 +155,12 @@ class KeyBindingsManager {
     return root;
   }
 
+  void _initialize() {
+    _currentNode = _bindingsTree;
+    // TODO: Should we keep track of the subscription? Would we ever cancel it?
+    _provider.stream.listen(_detectSequence);
+  }
+
   /// Tests whether [element] is an editable element.
   bool _isEditable(Element element) {
     if (element is TextAreaElement) {
@@ -176,13 +190,5 @@ class KeyBindingsManager {
   void _resetTimeout() {
     _timeoutTimer?.cancel();
     _timeoutTimer = new Timer(sequenceTimeout, _resetCurrentNode);
-  }
-
-  void _subscribe(EventTarget target) {
-    // TODO: Should we keep track of the subscription? Would we ever cancel it?
-//    KeyEvent.keyDownEvent.forTarget(target, useCapture: true).listen(_detectKeyBindingPress);
-    Element.keyDownEvent
-        .forTarget(target, useCapture: true)
-        .listen(_detectKeyBindingPress);
   }
 }

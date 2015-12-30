@@ -27,7 +27,6 @@ class KeyEventProvider extends EventProvider {
 
 main() {
   group('KeyBindingsManager', () {
-
     KeyEventProvider provider;
     KeyBindingsManager manager;
 

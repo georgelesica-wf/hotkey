@@ -6,6 +6,7 @@ import 'dart:html';
 import 'package:hotkey/src/binding.dart';
 import 'package:hotkey/src/combination.dart';
 import 'package:hotkey/src/event_provider.dart';
+import 'package:hotkey/src/handler.dart';
 import 'package:hotkey/src/typedefs.dart';
 
 // TODO: Add getter for "help" data structure based on descriptions and available bindings.
@@ -13,6 +14,7 @@ import 'package:hotkey/src/typedefs.dart';
 // TODO: Contextual hotkeys that fire only when a particular element has focus.
 // TODO: Consider allowing consumers to temporarily override handlers (stack).
 // FIXME: Do not reset matching when the only key pressed was a modifier.
+// TODO: Tests for combination.
 class KeyBindingsManager {
   /// The maximum amount of time the manager will wait between kepresses
   /// before assuming that the user has abandoned the sequence and
@@ -33,6 +35,8 @@ class KeyBindingsManager {
 
   EventProvider _provider;
 
+  List<Handler> _handlers = [];
+
   KeyBindingsManager() {
     _provider = new KeyboardEventProvider(window);
     _initialize();
@@ -48,8 +52,8 @@ class KeyBindingsManager {
     _initialize();
   }
 
-  // TODO: Add optional [description] parameter.
-  void add(String bindingsString, KeyBindingCallback callback) {
+  void add(String bindingsString, KeyBindingCallback callback,
+      {String description: ''}) {
     var bindings = parseBindingsString(bindingsString);
     bindings.forEach((sequence) {
       Map previous = null;
@@ -63,10 +67,13 @@ class KeyBindingsManager {
               'Key binding "$sequence" shadows an existing key binding.');
         }
       });
-      previous[sequence.last] = () => callback(sequence);
+      var handler = new Handler(sequence, callback, description);
+      previous[sequence.last] = handler;
+      _handlers.add(handler);
     });
   }
 
+  // TODO: How can we get descriptions into this cleanly?
   void addAll(Map<String, KeyBindingCallback> bindings) {
     bindings
         .forEach((bindingsString, callback) => add(bindingsString, callback));
@@ -86,6 +93,7 @@ class KeyBindingsManager {
               'Key binding "$binding" does not currently exist.');
         }
       });
+      _handlers.remove(previous[binding.last] as Handler);
       previous.remove(binding.last);
     });
   }
@@ -94,7 +102,10 @@ class KeyBindingsManager {
     for (var key in _bindingsTree.keys.toList()) {
       _bindingsTree.remove(key);
     }
+    _handlers = [];
   }
+
+  Iterable<Handler> get handlers => _handlers;
 
   void _detectSequence(KeyEvent event) {
     // We do this check here because the user pressing a key that

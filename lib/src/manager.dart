@@ -11,9 +11,7 @@ import 'package:hotkey/src/typedefs.dart';
 
 // TODO: Add getter for "help" data structure based on descriptions and available bindings.
 // TODO: Crib whatever we can from datatables hotkey manager.
-// TODO: Contextual hotkeys that fire only when a particular element has focus.
 // TODO: Consider allowing consumers to temporarily override handlers (stack).
-// TODO: Tests for combination.
 class KeyBindingsManager {
   /// The maximum amount of time the manager will wait between kepresses
   /// before assuming that the user has abandoned the sequence and
@@ -136,7 +134,7 @@ class KeyBindingsManager {
 
     _resetTimeout();
 
-    var combo = new Combination.fromKeyboardEvent(event);
+    var combo = new Combination.fromKeyEvent(event);
     _currentNode = _currentNode[combo];
 
     if (_currentNode == null) {

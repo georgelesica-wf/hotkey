@@ -14,6 +14,8 @@ class Combination {
   int _keyCode;
   String _keyString;
 
+  int _hashCode;
+
   int get keyCode => _keyCode;
   String get keyString => _keyString;
 
@@ -30,8 +32,7 @@ class Combination {
     _keyString = ALLOWED_KEYS[keyCode];
   }
 
-  factory Combination.fromKeyboardEvent(KeyboardEvent event) {
-    // TODO: May want to check that keyCode is allowed.
+  factory Combination.fromKeyEvent(KeyEvent event) {
     return new Combination(event.keyCode,
         alt: event.altKey,
         control: event.ctrlKey,
@@ -185,15 +186,12 @@ class Combination {
     return tokens;
   }
 
-  bool operator ==(other) =>
-      other is Combination &&
-      other.alt == alt &&
-      other.control == control &&
-      other.meta == meta &&
-      other.shift == shift &&
-      other._keyCode == _keyCode;
+  bool operator ==(other) => other is Combination && other.hashCode == hashCode;
 
   int get hashCode {
+    if (_hashCode != null) {
+      return _hashCode;
+    }
     var code = _keyCode * 10000;
     code += alt ? 1000 : 0;
     code += control ? 100 : 0;
@@ -203,8 +201,9 @@ class Combination {
   }
 
   String toString() {
-    // TODO: Use the + constant instead of the character.
-    return '${alt ? 'ALT+' : ''}${control ? 'CTRL+' : ''}'
-        '${meta ? 'META+' : ''}${shift ? 'SHIFT+' : ''}$keyString';
+    return '${alt ? 'ALT$KEY_DELIMITER' : ''}'
+        '${control ? 'CTRL$KEY_DELIMITER' : ''}'
+        '${meta ? 'META$KEY_DELIMITER' : ''}'
+        '${shift ? 'SHIFT$KEY_DELIMITER' : ''}$keyString';
   }
 }

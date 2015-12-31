@@ -54,23 +54,75 @@ class KeyBindingsManager {
     _initialize();
   }
 
+  Iterable<Handler> get handlers => _handlers;
+
   void addAll(Map<String, KeyBindingCallback> bindings, {bool replace: false}) {
     bindings.forEach((bindingsString, callback) =>
         addBinding(bindingsString, callback, replace: replace));
   }
 
+  /// Add a key binding to the manager. Accepts a [bindingString], which
+  /// can actually specify more than one key combination sequence, and a
+  /// [callback] that will be called when one of the associated
+  /// sequences is detected and will be passed the sequence that was
+  /// actually detected.
+  ///
+  /// Some example bindings strings are given below:
+  ///
+  /// ```
+  /// CTRL+A
+  /// CTRL+A > CTRL+B // CTRL+A followed by CTRL+B
+  /// CTRL+A | CTRL+B // CTRL+A and CTRL+B do the same thing.
+  /// ```
+  ///
+  /// Optionally, a description may be provided. This will be included
+  /// in the [Handler] that is created for the key binding and can be
+  /// accessed by iterating over the [handlers] property of the manager.
+  ///
+  /// If [selector] is specified, and is a CSS selector that identifies
+  /// one or more focusable DOM elements, the key binding will only
+  /// call the callback when one of those DOM elements has focus. Otherwise
+  /// it will do nothing.
+  ///
+  /// By default, attempting to overwrite or shadow an existing binding
+  /// will result in an exception. If `replace` is `true`, however, any
+  /// existing bindings that would be made ambiguous or redundant
+  /// will be removed before the new binding is added.
   void addBinding(String bindingsString, KeyBindingCallback callback,
       {String description: '', String selector: '', bool replace: false}) {
     var bindings = parseBindingsString(bindingsString);
     for (var sequence in bindings) {
-      addHandler(
+      _addHandler(
           new Handler(sequence, callback,
               description: description, selector: selector),
           replace: replace);
     }
   }
 
-  void addHandler(Handler handler, {bool replace: false}) {
+  /// Remove all key bindings from this manager.
+  void removeAll() {
+    for (var key in _bindingsTree.keys.toList()) {
+      _bindingsTree.remove(key);
+    }
+    _handlers = [];
+  }
+
+  /// Remove a binding based on its binding string. If the original
+  /// binding string that was used to add the handler consisted of
+  /// several OR'd parts (separated with `|`), a subset of the parts
+  /// may be specified for removal and only those parts will be
+  /// removed.
+  ///
+  /// If a binding is to be removed only to be immediately replaced,
+  /// consider using the `replace` parameter of `addBinding` instead.
+  void removeBinding(String bindingsString) {
+    var bindings = parseBindingsString(bindingsString);
+    bindings.forEach((sequence) {
+      _removeSequence(sequence);
+    });
+  }
+
+  void _addHandler(Handler handler, {bool replace: false}) {
     var previous = null;
     var current = _bindingsTree;
     for (var combo in handler.sequence) {
@@ -90,7 +142,7 @@ class KeyBindingsManager {
       // below us in the tree, then try to add the [Handler] again.
       // The recursion can never go more than one level deep.
       _pruneTree(current);
-      addHandler(handler);
+      _addHandler(handler);
       return;
     }
 
@@ -100,33 +152,6 @@ class KeyBindingsManager {
     previous[handler.sequence.last] = handler;
     _handlers.add(handler);
   }
-
-  /// Remove all key bindings from this manager.
-  void removeAll() {
-    for (var key in _bindingsTree.keys.toList()) {
-      _bindingsTree.remove(key);
-    }
-    _handlers = [];
-  }
-
-  /// Remove a binding based on its binding string. If the original
-  /// binding string that was used to add the handler consisted of
-  /// several OR'd parts (separated with `|`), a subset of the parts
-  /// may be specified for removal and only those parts will be
-  /// removed.
-  void removeBinding(String bindingsString) {
-    var bindings = parseBindingsString(bindingsString);
-    bindings.forEach((sequence) {
-      _removeSequence(sequence);
-    });
-  }
-
-  /// Remove a [Handler] from the manager.
-  void removeHandler(Handler handler) {
-    _removeSequence(handler.sequence);
-  }
-
-  Iterable<Handler> get handlers => _handlers;
 
   void _detectSequence(KeyEvent event) {
     // Check for presses on modifier keys. This indicates that the
@@ -238,7 +263,7 @@ class KeyBindingsManager {
   /// expected to be more than two or three levels deep.
   void _pruneTree(pruneRoot) {
     if (pruneRoot is Handler) {
-      removeHandler(pruneRoot);
+      _removeHandler(pruneRoot);
       return;
     }
 
@@ -249,6 +274,14 @@ class KeyBindingsManager {
     }
   }
 
+  /// Remove a [Handler] from the manager.
+  void _removeHandler(Handler handler) {
+    _removeSequence(handler.sequence);
+  }
+
+  /// Remove the [Handler] that exactly matches a particular sequence
+  /// of key combinations. If the sequence doesn't match exactly,
+  /// do nothing.
   void _removeSequence(Iterable<Combination> sequence) {
     _vertexStack.clear();
     _edgeStack.clear();

@@ -4,60 +4,75 @@ import 'dart:html';
 
 import 'package:quiver/collection.dart';
 
-const KEY_DELIMITER = '+';
+import 'package:hotkey/src/constants.dart';
+import 'package:hotkey/src/modifiers.dart';
 
 class Combination {
-  final bool alt;
-  final bool control;
-  final bool meta;
-  final bool shift;
   int _keyCode;
   String _keyString;
+  Modifiers _modifiers;
 
   int _hashCode;
 
   int get keyCode => _keyCode;
+
   String get keyString => _keyString;
 
-  Combination(int keyCode,
-      {this.alt: false,
-      this.control: false,
-      this.meta: false,
-      this.shift: false}) {
-    // TODO: Is this check necessary or can we just let the key string be null?
+  Modifiers get modifiers => _modifiers;
+
+  Combination(int keyCode, Modifiers modifiers) {
     if (!ALLOWED_KEYS.containsKey(keyCode)) {
       throw new ArgumentError('Invalid key code: $keyCode');
     }
+
     _keyCode = keyCode;
     _keyString = ALLOWED_KEYS[keyCode];
+    _modifiers = modifiers;
   }
 
   factory Combination.fromKeyEvent(KeyEvent event) {
-    return new Combination(event.keyCode,
-        alt: event.altKey,
-        control: event.ctrlKey,
-        meta: event.metaKey,
-        shift: event.shiftKey);
+    Modifiers modifiers = noKey;
+    if (event.altKey) {
+      modifiers += altKey;
+    }
+    if (event.ctrlKey) {
+      modifiers += ctrlKey;
+    }
+    if (event.metaKey) {
+      modifiers += metaKey;
+    }
+    if (event.shiftKey) {
+      modifiers += shiftKey;
+    }
+    return new Combination(event.keyCode, modifiers);
   }
 
   factory Combination.fromString(String comboString) {
-    var alt = false;
-    var control = false;
-    var meta = false;
-    var shift = false;
     var keyCode;
+    Modifiers modifiers = noKey;
 
     var tokens = _tokenize(comboString);
     tokens.forEach((t) {
-      alt = alt ? alt : t == 'ALT';
-      control = control ? control : t == 'CTRL';
-      meta = meta ? meta : t == 'META';
-      shift = shift ? shift : t == 'SHIFT';
-      keyCode = keyCode ?? ALLOWED_KEYS.inverse[t];
+      switch (t) {
+        case 'ALT':
+          modifiers += altKey;
+          break;
+        case 'CTRL':
+          modifiers += ctrlKey;
+          break;
+        case 'META':
+          modifiers += metaKey;
+          break;
+        case 'SHIFT':
+          modifiers += shiftKey;
+          break;
+        default:
+          keyCode = keyCode ?? ALLOWED_KEYS.inverse[t];
+          break;
+      }
     });
 
-    return new Combination(keyCode,
-        alt: alt, control: control, meta: meta, shift: shift);
+    return new Combination(keyCode, modifiers);
   }
 
   /// Allowed key identifiers used in key bindings.
@@ -151,6 +166,10 @@ class Combination {
     'SHIFT'
   ];
 
+  /// Some of the modifier keys have multiple codes, partly because of
+  /// the differences between Mac and PC keyboards. This provides a
+  /// list of all of the key codes that could possibly be associated
+  /// with modifier keys.
   static final List<String> MODIFIER_CODES = const [
     16, // shift
     17, // ctrl
@@ -170,17 +189,18 @@ class Combination {
         .replaceAll(_whitespace, '')
         .toUpperCase()
         .split(KEY_DELIMITER);
-    int modifiers = 0;
-    int nonModifiers = 0;
+    int modifiersCount = 0;
+    int nonModifiersCount = 0;
     tokens.forEach((t) {
       if (ALLOWED_MODIFIERS.contains(t)) {
-        modifiers += 1;
+        modifiersCount += 1;
       }
       if (ALLOWED_KEYS.containsValue(t)) {
-        nonModifiers += 1;
+        nonModifiersCount += 1;
       }
     });
-    if (nonModifiers != 1 || nonModifiers + modifiers != tokens.length) {
+    if (nonModifiersCount != 1 ||
+        nonModifiersCount + modifiersCount != tokens.length) {
       throw new ArgumentError('Invalid binding string: $comboString');
     }
     return tokens;
@@ -192,18 +212,11 @@ class Combination {
     if (_hashCode != null) {
       return _hashCode;
     }
-    var code = _keyCode * 10000;
-    code += alt ? 1000 : 0;
-    code += control ? 100 : 0;
-    code += meta ? 10 : 0;
-    code += shift ? 1 : 0;
-    return code;
+    // TODO: This shouldn't use details about the Modifiers implementation.
+    return _keyCode * 100 + _modifiers.hashCode;
   }
 
   String toString() {
-    return '${alt ? 'ALT$KEY_DELIMITER' : ''}'
-        '${control ? 'CTRL$KEY_DELIMITER' : ''}'
-        '${meta ? 'META$KEY_DELIMITER' : ''}'
-        '${shift ? 'SHIFT$KEY_DELIMITER' : ''}$keyString';
+    return '$_modifiers${_modifiers == noKey ? '' : KEY_DELIMITER}$keyString';
   }
 }

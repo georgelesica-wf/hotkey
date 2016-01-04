@@ -12,4 +12,3 @@ const KEY_DELIMITER = '+';
 /// The delimiter to separate key combinations within a key binding.
 /// Example: 'CTRL+M > CTRL+I' means pressing CTRL + G then CTRL + I.
 const SEQUENCE_DELIMITER = '>';
-

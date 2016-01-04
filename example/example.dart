@@ -16,15 +16,19 @@ main() {
   }
 
   void updateBindings([_]) {
-    manager.removeAll();
+    manager.removeAllBindings();
     clearMessage();
     bindingsText.value.split('\n').forEach((b) {
       manager.addBinding(b, (_) => setMessage(b));
     });
-    manager.addBinding('CTRL+T > CTRL+1', (_) => setMessage('hit target 1'),
-        selector: '#target-1 input');
-    manager.addBinding('CTRL+T > CTRL+2', (_) => setMessage('hit target 2'),
-        selector: '#target-2 input');
+    manager
+      ..addBinding('CTRL+T > CTRL+1', (_) => setMessage('hit target 1'),
+          selector: '#target-1 input')
+      ..addBinding('CTRL+T > CTRL+2', (_) => setMessage('hit target 2'),
+          selector: '#target-2 input')
+      ..addBinding(
+          'UP > UP > DOWN > DOWN > LEFT > RIGHT > LEFT > RIGHT > B > A',
+          (_) => setMessage('the Konami code!'));
   }
 
   updateBindings();

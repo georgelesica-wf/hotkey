@@ -67,7 +67,12 @@ class KeyBindingsManager {
   /// or tooltips, etc.
   Iterable<Handler> get handlers => _handlers;
 
-  void addAll(Map<String, KeyBindingCallback> bindings, {bool replace: false}) {
+  /// Add a set of bindings all at once using a map from binding strings
+  /// to callbacks. For simplicity, this does not allow CSS selectors
+  /// or descriptions to be set for the bindings. If you need to add
+  /// those, use [add] with the cascade operator ([..]).
+  void addAllBindings(Map<String, KeyBindingCallback> bindings,
+      {bool replace: false}) {
     bindings.forEach((bindingsString, callback) =>
         addBinding(bindingsString, callback, replace: replace));
   }
@@ -111,7 +116,7 @@ class KeyBindingsManager {
   }
 
   /// Remove all key bindings from this manager.
-  void removeAll() {
+  void removeAllBindings() {
     for (var key in _bindingsTree.keys.toList()) {
       _bindingsTree.remove(key);
     }

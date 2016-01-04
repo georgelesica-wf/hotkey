@@ -27,17 +27,24 @@ class KeyBindingsManager {
   /// keyboard event observed.
   dynamic _currentNode;
 
-  Timer _timeoutTimer;
+  /// Used internally for tree traversal bookkeeping.
+  Queue<Combination> _edgeStack = new Queue();
 
-  EventProvider _provider;
-
+  /// Flat list of currently registered keyboard handlers.
   List<Handler> _handlers = [];
 
   /// Used internally for tree traversal bookkeeping.
-  Queue<Map> _vertexStack = new Queue();
+  Queue<Handler> _leafStack = new Queue();
+
+  /// Keyboard event proxy to allow for testing keyboard events.
+  EventProvider _provider;
+
+  /// Timer used internally to reset handling if the time between
+  /// keypresses is too great.
+  Timer _timeoutTimer;
 
   /// Used internally for tree traversal bookkeeping.
-  Queue<Combination> _edgeStack = new Queue();
+  Queue<Map> _vertexStack = new Queue();
 
   KeyBindingsManager() {
     _provider = new KeyboardEventProvider(window);
@@ -54,6 +61,10 @@ class KeyBindingsManager {
     _initialize();
   }
 
+  /// Getter to provide access to all currently registered keyboard
+  /// handlers. This allows the consumer to gain access to information
+  /// about the handlers for purposes of generating documentation
+  /// or tooltips, etc.
   Iterable<Handler> get handlers => _handlers;
 
   void addAll(Map<String, KeyBindingCallback> bindings, {bool replace: false}) {
@@ -129,10 +140,6 @@ class KeyBindingsManager {
       if (current is Map) {
         previous = current;
         current = current.putIfAbsent(combo, () => {});
-      } else {
-        throw new ArgumentError(
-            'Key binding "${handler.sequence}" shadows existing key binding.'
-            ' Try adding `replace: true` to replace the handler.');
       }
     }
 
@@ -141,9 +148,15 @@ class KeyBindingsManager {
       // Either way, if we are replacing, we need to remove everything
       // below us in the tree, then try to add the [Handler] again.
       // The recursion can never go more than one level deep.
-      _pruneTree(current);
-      _addHandler(handler);
-      return;
+      if (replace) {
+        _pruneTree(current);
+        _addHandler(handler);
+        return;
+      } else {
+        throw new ArgumentError(
+            'Key binding "${handler.sequence}" shadows existing key binding.'
+            ' Try adding `replace: true` to replace the handler.');
+      }
     }
 
     assert(previous is Map);
@@ -258,19 +271,27 @@ class KeyBindingsManager {
   }
 
   /// Find all [Handler] objects (leaves) that are below [pruneRoot] in
-  /// the tree and remove them. This is recursive, but doing it this way
-  /// is conceptually simpler than the alternative, and the tree is never
-  /// expected to be more than two or three levels deep.
+  /// the tree and remove them.
   void _pruneTree(pruneRoot) {
-    if (pruneRoot is Handler) {
-      _removeHandler(pruneRoot);
-      return;
+    _leafStack.clear();
+
+    _vertexStack.clear();
+    _vertexStack.addFirst(pruneRoot);
+
+    while (_vertexStack.isNotEmpty) {
+      var current = _vertexStack.removeFirst();
+      if (current is Map) {
+        for (var child in current.values) {
+          _vertexStack.addFirst(child);
+        }
+      }
+      if (current is Handler) {
+        _leafStack.addFirst(current);
+      }
     }
 
-    assert(pruneRoot is Map);
-
-    for (var nextRoot in pruneRoot.values) {
-      _pruneTree(nextRoot);
+    while (_leafStack.isNotEmpty) {
+      _removeHandler(_leafStack.removeFirst());
     }
   }
 
@@ -293,9 +314,14 @@ class KeyBindingsManager {
         _edgeStack.addFirst(combo);
         current = current[combo];
       } else {
-        // Sequence was too long.
+        // Ran into a handler or null before finishing the sequence.
         return;
       }
+    }
+
+    if (current == null) {
+      // Finished the sequence but ended at null.
+      return;
     }
 
     if (current is Map) {
